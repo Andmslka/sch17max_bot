@@ -39,16 +39,24 @@ def send_message(chat_id, text):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     update = request.json
-    logger.info(f"Update received: {update.get('update_type')}, chat_id: {get_chat_id(update)}, payload: {update.get('payload')}")
+
+    # Полный лог апдейта для отладки
+    logger.info("=== Новый апдейт ===")
+    logger.info(update)
 
     chat_id = get_chat_id(update)
-    
+    logger.info(f"Определён chat_id: {chat_id}")
+
     # Универсальные ответы
     if update.get("update_type") == "bot_started":
         send_message(chat_id, f"Привет! Вы запустили бота. Payload: {update.get('payload')}")
     elif update.get("update_type") == "message_created":
-        message_text = update.get("message", {}).get("text", "")
-        send_message(chat_id, f"Вы написали: {message_text}")
+        # Если текст сообщения есть
+        message_text = update.get("message", {}).get("text")
+        if message_text:
+            send_message(chat_id, f"Вы написали: {message_text}")
+        else:
+            logger.warning("Текст сообщения отсутствует")
     else:
         send_message(chat_id, f"Получено событие {update.get('update_type')}")
 

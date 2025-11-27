@@ -3,6 +3,25 @@ import logging
 import requests
 from flask import Flask, request, jsonify
 
+def get_chat_id(update):
+    # Сначала пытаемся взять chat_id на верхнем уровне
+    if update.get("chat_id"):
+        return update["chat_id"]
+    # Если нет, ищем внутри message -> recipient
+    if "message" in update and "recipient" in update["message"]:
+        return update["message"]["recipient"].get("chat_id")
+    # fallback: None
+    return None
+
+def get_message_text(update):
+    # Сначала проверяем поле text на верхнем уровне
+    if update.get("text"):
+        return update["text"]
+    # Ищем внутри message -> body -> text
+    if "message" in update and "body" in update["message"]:
+        return update["message"]["body"].get("text")
+    return None
+    
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -39,26 +58,18 @@ def send_message(chat_id, text):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     update = request.json
-
-    # Полный лог апдейта для отладки
     logger.info("=== Новый апдейт ===")
-    logger.info(update)
+    logger.info(json.dumps(update, indent=4, ensure_ascii=False))
 
     chat_id = get_chat_id(update)
-    logger.info(f"Определён chat_id: {chat_id}")
+    text = get_message_text(update)
 
-    # Универсальные ответы
-    if update.get("update_type") == "bot_started":
-        send_message(chat_id, f"Привет! Вы запустили бота. Payload: {update.get('payload')}")
-    elif update.get("update_type") == "message_created":
-        # Если текст сообщения есть
-        message_text = update.get("message", {}).get("text")
-        if message_text:
-            send_message(chat_id, f"Вы написали: {message_text}")
-        else:
-            logger.warning("Текст сообщения отсутствует")
-    else:
-        send_message(chat_id, f"Получено событие {update.get('update_type')}")
+    logger.info(f"Определён chat_id: {chat_id}")
+    logger.info(f"Текст сообщения: {text}")
+
+    # здесь можно вызывать функцию отправки сообщения
+    if chat_id and text:
+        send_message(chat_id, f"Вы написали: {text}")
 
     return jsonify({"status": "ok"})
 

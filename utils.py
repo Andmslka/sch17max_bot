@@ -27,7 +27,7 @@ def send_message(chat_id: int, text: str, format_type: str = "Markdown"):
         return False
 
     payload = {
-        "chat_id": chat_id,
+        "chat_id": str(chat_id),
         "text": text,
         "format": format_type
     }

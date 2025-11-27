@@ -39,13 +39,17 @@ def send_message(chat_id, text):
         logger.warning("chat_id отсутствует, сообщение не отправлено")
         return
     headers = {"Authorization": MAX_BOT_TOKEN, "Content-Type": "application/json"}
-    payload = {"chat_id": chat_id, "text": text}
+    payload = {
+        "recipient": {"chat_id": chat_id},
+        "text": text
+    }
     try:
         response = requests.post(MAX_API_URL, headers=headers, json=payload)
         response.raise_for_status()
         logger.info(f"Сообщение отправлено в чат {chat_id}")
     except requests.HTTPError as e:
         logger.error(f"Ошибка отправки сообщения: {e}")
+        logger.error(f"Ответ сервера: {response.text}")
 
 # Обработчик вебхука
 @app.route("/webhook", methods=["POST"])

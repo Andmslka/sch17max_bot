@@ -4,25 +4,6 @@ import requests
 import json
 from flask import Flask, request, jsonify
 
-def get_chat_id(update):
-    # Сначала пытаемся взять chat_id на верхнем уровне
-    if update.get("chat_id"):
-        return update["chat_id"]
-    # Если нет, ищем внутри message -> recipient
-    if "message" in update and "recipient" in update["message"]:
-        return update["message"]["recipient"].get("chat_id")
-    # fallback: None
-    return None
-
-def get_message_text(update):
-    # Сначала проверяем поле text на верхнем уровне
-    if update.get("text"):
-        return update["text"]
-    # Ищем внутри message -> body -> text
-    if "message" in update and "body" in update["message"]:
-        return update["message"]["body"].get("text")
-    return None
-    
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -31,14 +12,25 @@ MAX_API_URL = "https://platform-api.max.ru/messages"
 
 app = Flask(__name__)
 
-# Универсальная функция для извлечения chat_id
+# Функция извлечения chat_id
 def get_chat_id(update):
+    # Проверка верхнего уровня
     if update.get("chat_id"):
         return update["chat_id"]
-    if update.get("message") and update["message"].get("chat") and update["message"]["chat"].get("id"):
-        return update["message"]["chat"]["id"]
-    if update.get("user") and update["user"].get("user_id"):
-        return update["user"]["user_id"]
+    # Проверка в сообщении
+    if update.get("message"):
+        recipient = update["message"].get("recipient")
+        if recipient and recipient.get("chat_id"):
+            return recipient["chat_id"]
+        sender = update["message"].get("sender")
+        if sender and sender.get("user_id"):
+            return sender["user_id"]
+    return None
+
+# Функция извлечения текста сообщения
+def get_message_text(update):
+    if update.get("message") and update["message"].get("body"):
+        return update["message"]["body"].get("text")
     return None
 
 # Функция отправки сообщений
@@ -68,7 +60,7 @@ def webhook():
     logger.info(f"Определён chat_id: {chat_id}")
     logger.info(f"Текст сообщения: {text}")
 
-    # здесь можно вызывать функцию отправки сообщения
+    # Отправляем сообщение обратно, если есть chat_id и текст
     if chat_id and text:
         send_message(chat_id, f"Вы написали: {text}")
 
